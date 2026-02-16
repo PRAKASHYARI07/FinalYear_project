@@ -1,0 +1,433 @@
+===============================================================================
+                        FIXIT PROJECT DOCUMENTATION
+                    Community Problem Reporting System
+===============================================================================
+
+PROJECT SYNOPSIS:
+Citizen submits a problem → System assigns priority & category → Department 
+updates status → Citizen tracks progress
+
+MAIN ACTORS:
+- Citizen: Report issues, upload photos, track status, reset password
+- Department Staff/Admin: View assigned reports, update status
+
+===============================================================================
+PHASE 1 – DATA UNDERSTANDING (ER DIAGRAM) ✅ COMPLETED
+===============================================================================
+Q1. Who are the users of my system?
+    - Citizen (Report creators)
+    - Department Staff/Admin (Report handlers)
+
+Q2. What information must the system store?
+    - User information (name, email, password, role, department)
+    - Problem report information (title, description, photos, category)
+    - Department information (Traffic, Police, Utilities, etc.)
+    - Priority information (High, Medium, Low)
+    - Status tracking (Pending, In Progress, Resolved)
+
+Q3. One sentence project flow
+    - Citizen submits a problem → system assigns priority → department updates 
+      status → citizen tracks progress
+
+Status: ✅ ER diagram designed and explained
+
+
+===============================================================================
+PHASE 2 – USE CASE DIAGRAM (UCD) ✅ COMPLETED
+===============================================================================
+USE CASE DIAGRAM EXPLANATION:
+
+Citizen Actor:
+- Register: Create account with email and password
+- Login: Authenticate with email/password
+- Report Issue: Submit title, description, optional photos
+- Track Status: View reports and their current status
+- Forgot Password: Reset password via email token
+
+Department Staff/Admin Actor:
+- Login: Authenticate with credentials
+- View Reports: See all assigned reports
+- Update Status: Change report status (Pending → In Progress → Resolved)
+- View Analytics: (Future) Dashboard with report statistics
+
+Status: ✅ Use case diagram documented
+
+
+===============================================================================
+PHASE 3 – DATABASE DESIGN & SETUP ✅ COMPLETED
+===============================================================================
+Database: PostgreSQL
+Connection String: postgresql://postgres:numa123@localhost:5432/fixit_db
+
+TABLES CREATED:
+
+1. Users Table
+   - id (PK)
+   - name (String)
+   - email (Unique, String)
+   - password (Hashed)
+   - role (citizen/admin)
+   - department (nullable, for admin staff)
+   - reset_token (nullable, for password recovery)
+   - reset_token_expires (nullable, DateTime)
+
+2. Reports Table
+   - id (PK)
+   - title (String)
+   - description (String)
+   - status (pending/in_progress/resolved)
+   - category (complaint type from AI)
+   - department (assigned department)
+   - priority (medium by default)
+   - ai_summary (AI-generated text)
+   - suspicious_flag (Boolean)
+   - photo_url (nullable, base64 or URL)
+   - user_id (FK → Users)
+
+Status: ✅ Database and tables created successfully
+
+
+===============================================================================
+PHASE 4 – BACKEND API DEVELOPMENT ✅ COMPLETED
+===============================================================================
+
+Framework: FastAPI + SQLAlchemy + Uvicorn
+Base URL: http://127.0.0.1:8000
+
+ENDPOINTS IMPLEMENTED:
+
+USER ENDPOINTS:
+- POST /users/ - Register new user
+- POST /users/login - Login with email/password
+- POST /users/token - Token endpoint for Swagger UI
+- POST /users/forgot-password - Request password reset
+- POST /users/reset-password - Reset password with token
+
+REPORT ENDPOINTS:
+- POST /reports/ - Create new report (with AI categorization)
+- GET /reports/ - Get user's reports (citizen) or all reports (admin)
+- GET /reports/admin/all - Get all reports (admin only)
+- PUT /reports/{report_id}/status - Update report status
+
+HEALTH CHECK:
+- GET / - Returns: {"message":"FixIt backend with PostgreSQL is running"}
+
+Status: ✅ All API endpoints working with CORS enabled
+
+
+===============================================================================
+PHASE 5 – FRONTEND UI DEVELOPMENT ✅ COMPLETED
+===============================================================================
+
+Framework: React + Vite + Tailwind CSS
+Dev Server: http://localhost:5173
+
+PAGES CREATED:
+
+1. Login Page
+   - Email/password login
+   - Link to register
+   - Link to forgot password
+   - Form validation
+
+2. Register Page
+   - Name, email, password input
+   - User role selection (citizen/admin)
+   - Validation and duplicate email checking
+
+3. Forgot Password Page
+   - Two-step process:
+     * Step 1: Request reset with email
+     * Step 2: Reset password with token
+   - Token displayed in response
+   - Error handling
+
+4. Create Report Page
+   - Title and description input
+   - Photo upload with preview
+   - Photo removal option
+   - Real-time character count
+   - Submit button with loading state
+
+5. Reports Page
+   - List all reports
+   - Display AI category and summary
+   - Show status badges (Pending/In Progress/Resolved)
+   - Admin can update status
+   - Admin indicator badge
+
+6. Navbar Component
+   - Navigation links (Reports, Create)
+   - Logout button
+
+Status: ✅ All UI pages and components created
+
+
+===============================================================================
+PHASE 6 – AUTHENTICATION & SECURITY ✅ COMPLETED
+===============================================================================
+
+AUTHENTICATION FEATURES:
+
+1. User Registration
+   - Password hashing with argon2
+   - Duplicate email prevention
+   - Email validation
+   - Role-based user creation (citizen/admin)
+
+2. Login System
+   - Email/password OAuth2 authentication
+   - JWT token generation
+   - Token stored in localStorage
+   - Automatic token refresh on page load
+
+3. Password Reset
+   - Secure token generation (32-character random string)
+   - Token expiration (30 minutes)
+   - Reset token stored in database
+   - New password hashing on reset
+
+4. Authorization
+   - Role-based access control (citizen vs admin)
+   - Endpoint protection with get_current_user dependency
+   - Admin-only endpoints (GET /reports/admin/all)
+
+Security Measures:
+- CORS enabled for development
+- Password hashing with argon2 + bcrypt
+- JWT tokens with exp claims
+- HTTP-only token storage (ready for production)
+
+Status: ✅ Authentication and security fully implemented
+
+
+===============================================================================
+PHASE 7 – AI INTEGRATION ✅ COMPLETED
+===============================================================================
+
+AI System: Scikit-learn ML Model + Rule-based Detection
+
+MODEL FEATURES:
+
+1. AI Categorization
+   Rule-based detection for common issues:
+   - Water/Utilities: "water", "leak", "pipe", "flooding", "sewage"
+   - Traffic/Infrastructure: "pothole", "road", "street light", "traffic"
+   - Sanitation: "garbage", "trash", "litter", "waste"
+   - Falls back to ML model for other categories
+
+2. AI Summary Generation
+   - Auto-generated summary explaining categorization
+   - Example: "Water or plumbing issue detected"
+   - Shown in success message after report creation
+
+3. ML Model (Logistic Regression)
+   - Trained on 20,000+ complaint records
+   - TF-IDF vectorization
+   - Handles parking, noise, animal complaints
+   - Minimum 20 samples per category
+
+4. Department Mapping
+   - Auto-assigns department based on category
+   - Illegal Parking → Traffic Department
+   - Noise issues → Police Department
+   - Animal Abuse → Animal Control
+   - Graffiti/Posting → Municipality
+   - Fallback to General Administration
+
+Issues Fixed:
+- Fixed tuple unpacking: predict_department() returns 3 values
+- Added missing import for map_to_department()
+- Fixed database schema (removed assigned_admin_id)
+
+Status: ✅ AI module fully integrated and working
+
+
+===============================================================================
+PHASE 8 – PHOTO UPLOAD FEATURE ✅ COMPLETED
+===============================================================================
+
+PHOTO UPLOAD SYSTEM:
+
+Frontend Features:
+- File input with image validation
+- Photo preview before upload
+- Remove photo option
+- Base64 encoding for transmission
+
+Backend Features:
+- photo_url field added to Reports table
+- Accepts base64 encoded images
+- Stores photo reference with report
+- Optional field (nullable)
+
+Upload Currently:
+- Stores as base64 in database
+- Can display in reports page
+- Shows preview in success message
+
+Future Enhancement:
+- Cloud storage integration (AWS S3, Cloudinary)
+- File size validation
+- Multiple photo support
+
+Status: ✅ Photo upload fully implemented (base64 storage)
+
+
+===============================================================================
+PHASE 9 – PASSWORD RESET FEATURE ✅ COMPLETED
+===============================================================================
+
+PASSWORD RESET WORKFLOW:
+
+Step 1: Request Reset
+- User submits email
+- System generates random token (32 chars)
+- Token valid for 30 minutes
+- Returns token in response (send via email in production)
+
+Step 2: Reset Password
+- User provides: email, token, new password
+- System validates token and expiration
+- Hashes new password with argon2
+- Clears reset token from database
+
+Frontend:
+- Two-page flow:
+  * Page 1: Email input
+  * Page 2: Token + New password input
+- Error handling for invalid/expired tokens
+- Success message with redirect to login
+
+Status: ✅ Password reset fully implemented
+
+
+===============================================================================
+PHASE 10 – SYSTEM INTEGRATION & DEPLOYMENT ✅ COMPLETED
+===============================================================================
+
+SYSTEM STATUS:
+
+✅ Backend Server
+   - Running on http://127.0.0.1:8000
+   - Status: LISTENING
+   - Health Check: Working
+   - CORS: Enabled for all origins
+
+✅ Frontend Dev Server
+   - Running on http://localhost:5173
+   - Status: LISTENING
+   - Build: Vite (Fast refresh enabled)
+   - React DevTools: Compatible
+
+✅ Database Connection
+   - PostgreSQL: Connected
+   - Tables: Created and migrated
+   - Connection Pool: Active
+
+✅ API Communication
+   - Frontend ↔ Backend: Connected
+   - Request/Response: Working
+   - Error Handling: Implemented
+
+Verified Endpoints:
+- GET / returns {"message":"FixIt backend with PostgreSQL is running"}
+- All CRUD operations tested
+- Token-based auth verified
+- Role-based access working
+
+Current Issues Fixed:
+- CORS configuration corrected
+- Database schema alignment complete
+- AI model properly integrated
+- Password hashing verified
+
+Status: ✅ System fully integrated and operational
+
+
+===============================================================================
+PHASE 11 – TESTING & QUALITY ASSURANCE (IN PROGRESS) ⏳
+===============================================================================
+
+TESTED FEATURES:
+✅ User Registration
+✅ User Login
+✅ Password Reset Request
+✅ Password Reset Execution
+✅ Report Creation with AI
+✅ Photo Upload
+✅ Report Listing (Citizen)
+✅ Report Listing (Admin)
+✅ Report Status Update
+✅ CORS Communication
+✅ Token Authentication
+
+TODO - TESTING:
+- Unit tests for AI module
+- End-to-end test scenarios
+- Performance testing
+- Security penetration testing
+- Load testing
+
+Status: 🟡 In Progress
+
+
+===============================================================================
+PHASE 12 – PRODUCTION DEPLOYMENT (PLANNED) 📋
+===============================================================================
+
+DEPLOYMENT CHECKLIST:
+
+Infrastructure:
+- [ ] Choose hosting platform (AWS, DigitalOcean, Heroku)
+- [ ] Set up production database (PostgreSQL)
+- [ ] Configure environment variables
+- [ ] Set up HTTPS/SSL certificates
+
+Backend Deployment:
+- [ ] Build production Docker image
+- [ ] Deploy with Gunicorn + Nginx
+- [ ] Configure logging and monitoring
+- [ ] Set up error tracking (Sentry)
+
+Frontend Deployment:
+- [ ] Build production bundle (npm run build)
+- [ ] Configure CDN for static assets
+- [ ] Set up caching strategies
+
+Production Enhancements:
+- [ ] Email notifications for password reset
+- [ ] SMS notifications for report updates
+- [ ] Admin dashboard with analytics
+- [ ] Real-time notifications (WebSocket)
+- [ ] Cloud storage for photos (AWS S3)
+
+Status: 📋 Planned for future release
+
+
+===============================================================================
+IMPLEMENTATION SUMMARY
+===============================================================================
+
+Total Features Implemented: 20+
+Active Users: Can register and login
+Reports Created: Fully functional with AI
+AI Accuracy: Good for common categories
+Photo Support: Base64 (Ready for cloud upgrade)
+Security: JWT + Password hashing
+Database: PostgreSQL fully integrated
+API Endpoints: 9 endpoints + health check
+
+PROJECT STATUS: 🟢 READY FOR BETA TESTING
+
+Next Steps:
+1. UAT with actual users
+2. Gather feedback
+3. Optimize AI model
+4. Deploy to production
+5. Launch v1.0
+
+
+===============================================================================
+                            END OF DOCUMENTATION
+===============================================================================
